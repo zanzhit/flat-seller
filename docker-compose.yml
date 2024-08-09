@@ -15,10 +15,7 @@ services:
     container_name: migrator-container
     environment:
       POSTGRES_PASSWORD: 12345
-      CONFIG_PATH: /config/local.yaml
-    volumes:
-      - ./migrations:/migrations
-    command: ["./flat-seller", "--config=./config/local.yaml", "--migrations-path=./migrations"]
+    command: ["./migrator", "--config=/root/config/local.yaml", "--migrations-path=/root/migrations"]
     depends_on:
       - db
 
@@ -27,7 +24,7 @@ services:
     container_name: flat-seller-container
     environment:
       POSTGRES_PASSWORD: 12345
-      CONFIG_PATH: /config/local.yaml
+      CONFIG_PATH: /root/config/local.yaml
     ports:
       - "8082:8082"
     depends_on:

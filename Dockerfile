@@ -7,18 +7,19 @@ RUN go mod download
 
 COPY . .
 
+RUN go build -o migrator cmd/migrator/main.go
+
 RUN go build -o flat-seller cmd/flat-seller/main.go
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates postgresql-client postgresql
+RUN apk --no-cache add ca-certificates postgresql-client
 
 WORKDIR /root/
 
+COPY --from=builder /app/migrator .
 COPY --from=builder /app/flat-seller .
-COPY ./config /config
-COPY wait-for-postgres.sh .
+COPY ./config /root/config
+COPY ./migrations /root/migrations
 
-RUN chmod +x wait-for-postgres.sh
-
-CMD ["./wait-for-postgres.sh", "db", "5432", "--", "./flat-seller"]
+CMD ["./flat-seller"]
