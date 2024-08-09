@@ -7,6 +7,7 @@ services:
     container_name: postgres-container
     environment:
       POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
     ports:
       - "5432:5432"
 
@@ -15,7 +16,8 @@ services:
     container_name: migrator-container
     environment:
       POSTGRES_PASSWORD: 12345
-    command: ["./migrator", "--config=/root/config/local.yaml", "--migrations-path=/root/migrations"]
+      POSTGRES_USER: postgres
+    command: ["./wait-for-postgres.sh", "db", "5432", "--", "./migrator", "--config=/root/config/local.yaml", "--migrations-path=/root/migrations"]
     depends_on:
       - db
 
@@ -24,8 +26,10 @@ services:
     container_name: flat-seller-container
     environment:
       POSTGRES_PASSWORD: 12345
+      POSTGRES_USER: postgres
       CONFIG_PATH: /root/config/local.yaml
     ports:
       - "8082:8082"
+    command: ["./wait-for-postgres.sh", "db", "5432", "--", "./flat-seller"]
     depends_on:
       - migrator

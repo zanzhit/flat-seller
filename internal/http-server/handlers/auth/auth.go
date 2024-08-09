@@ -35,6 +35,7 @@ type AuthHandler struct {
 type User interface {
 	Login(email, password string) (string, error)
 	RegisterNewUser(email, password, userType string) (string, error)
+	GenerateToken(userID, email, userType string) (string, error)
 }
 
 func New(
@@ -157,6 +158,60 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		log.Error("failed to login", sl.Err(err))
 
 		handlers.Error(w, r, http.StatusInternalServerError, resp.Error("failed to login", middleware.GetReqID(r.Context())))
+
+		return
+	}
+
+	render.JSON(w, r, map[string]string{"token": token})
+}
+
+func (h *AuthHandler) DummyLogin(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.auth.DummyLogin"
+
+	log := h.log.With(
+		slog.String("op", op),
+		slog.String("request_id", middleware.GetReqID(r.Context())),
+	)
+
+	var req struct {
+		UserType string `json:"user_type" validate:"required"`
+	}
+
+	err := render.DecodeJSON(r.Body, &req)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			log.Error("request body is empty")
+
+			handlers.Error(w, r, http.StatusBadRequest, resp.Error("empty request", ""))
+
+			return
+		}
+
+		log.Error("failed to decode request body", sl.Err(err))
+
+		handlers.Error(w, r, http.StatusInternalServerError, resp.Error("failed to decode request", middleware.GetReqID(r.Context())))
+
+		return
+	}
+
+	log.Info("request body decoded", slog.Any("request", req))
+
+	if err := validator.New().Struct(req); err != nil {
+		validateErr := err.(validator.ValidationErrors)
+
+		log.Error("invalid request", sl.Err(err))
+
+		handlers.Error(w, r, http.StatusBadRequest, resp.ValidationError(validateErr))
+
+		return
+	}
+
+	// Генерация токена
+	token, err := h.user.GenerateToken("dummyID", "dummy@example.com", req.UserType)
+	if err != nil {
+		log.Error("failed to generate token", sl.Err(err))
+
+		handlers.Error(w, r, http.StatusInternalServerError, resp.Error("failed to generate token", middleware.GetReqID(r.Context())))
 
 		return
 	}

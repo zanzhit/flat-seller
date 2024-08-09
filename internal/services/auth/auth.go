@@ -6,12 +6,14 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/zanzhit/flat-seller/internal/domain/constants"
 	"github.com/zanzhit/flat-seller/internal/domain/errs"
 	"github.com/zanzhit/flat-seller/internal/domain/models"
-	"github.com/zanzhit/flat-seller/internal/lib/jwt"
+	jwtmid "github.com/zanzhit/flat-seller/internal/lib/jwt"
 	"github.com/zanzhit/flat-seller/internal/lib/logger/sl"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
@@ -103,7 +105,7 @@ func (s *AuthService) Login(userID, password string) (string, error) {
 
 	log.Info("user logged in successfully")
 
-	token, err := jwt.NewToken(user, s.tokenTTL, s.secret)
+	token, err := jwtmid.NewToken(user, s.tokenTTL, s.secret)
 	if err != nil {
 		s.log.Error("failed to generate token", sl.Err(err))
 
@@ -111,4 +113,31 @@ func (s *AuthService) Login(userID, password string) (string, error) {
 	}
 
 	return token, nil
+}
+
+func (s *AuthService) GenerateToken(userID, email, userType string) (string, error) {
+	const op = "service.auth.GenerateToken"
+
+	log := s.log.With(
+		slog.String("op", op),
+		slog.String("userID", userID),
+		slog.String("email", email),
+		slog.String("userType", userType),
+	)
+
+	claims := jwt.MapClaims{
+		"uid":       userID,
+		"email":     email,
+		"user_type": userType,
+		"exp":       time.Now().Add(s.tokenTTL).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(s.secret))
+	if err != nil {
+		log.Error("failed to generate token", sl.Err(err))
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	return tokenString, nil
 }

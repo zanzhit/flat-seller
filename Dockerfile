@@ -21,5 +21,8 @@ COPY --from=builder /app/migrator .
 COPY --from=builder /app/flat-seller .
 COPY ./config /root/config
 COPY ./migrations /root/migrations
+COPY wait-for-postgres.sh /root/
+
+RUN chmod +x /root/wait-for-postgres.sh
 
 CMD ["./flat-seller"]

@@ -71,6 +71,7 @@ func main() {
 
 	router.Post("/register", authhandler.RegisterNewUser)
 	router.Post("/login", authhandler.Login)
+	router.Post("/dummyLogin", authhandler.DummyLogin)
 
 	router.With(authmid.JWTAuth(cfg.Secret)).Group(func(r chi.Router) {
 		r.Post("/flat/create", flatHandler.SaveFlat)

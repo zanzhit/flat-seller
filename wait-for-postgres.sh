@@ -1,11 +1,16 @@
 #!/bin/sh
 
-# Ожидаем пока Postgres не будет доступен
-until pg_isready -h "$1" -p "$2" > /dev/null 2> /dev/null; do
-  echo "Waiting for postgres at $1:$2..."
+set -e
+
+host="$1"
+port="$2"
+shift 2
+cmd="$@"
+
+until PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$host" -U "$POSTGRES_USER" -p "$port" -c '\l'; do
+  >&2 echo "Postgres is unavailable - sleeping"
   sleep 1
 done
 
-# Выполняем оставшуюся команду
-shift 2
-exec "$@"
+>&2 echo "Postgres is up - executing command"
+exec $cmd
